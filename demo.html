@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Ink Loading Animation</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        background: #05060b;
+      }
+
+      canvas {
+        width: 192px;
+        height: 192px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas aria-label="Animated ink loading icon" role="img"></canvas>
+    <script type="module">
+      import { startInkLoadingAnimation } from "./ink-loading-animation.js";
+
+      await startInkLoadingAnimation(document.querySelector("canvas"));
+    </script>
+  </body>
+</html>
