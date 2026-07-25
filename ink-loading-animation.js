@@ -3,7 +3,6 @@ const CORNER_COUNT = 3072;
 const POSITION_COUNT = 532;
 const MATERIAL_FRAME_COUNT = 240;
 const GAME_FPS = 60;
-const DEFAULT_ASSET_ROOT = new URL("./assets/", import.meta.url);
 
 const VERTEX_SHADER = `#version 300 es
 precision highp float;
@@ -232,35 +231,44 @@ function requireUniform(gl, program, name) {
   return location;
 }
 
-async function loadAssets(assetRoot) {
-  const root = assetRoot instanceof URL
-    ? assetRoot
-    : new URL(assetRoot, document.baseURI);
-  const responses = await Promise.all([
-    fetch(new URL("LoadingIcon_00.curves.json", root)),
-    fetch(new URL("LoadingIcon_Vfi.r16ui.bin", root)),
-    fetch(new URL("LoadingIcon_Vfp.rgba16ui.bin", root)),
-  ]);
-  for (const response of responses) {
-    if (!response.ok) {
-      throw new Error(`Could not load ${response.url} (${response.status})`);
+function decodeTexture(value, expectedBytes, name) {
+  let data;
+  if (value instanceof Uint16Array) {
+    data = value;
+  } else if (value instanceof ArrayBuffer) {
+    data = new Uint16Array(value);
+  } else if (typeof value === "string") {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
     }
+    data = new Uint16Array(bytes.buffer);
+  } else {
+    throw new Error(`Invalid ${name} texture`);
   }
-  const [curves, vfiBuffer, vfpBuffer] = await Promise.all([
-    responses[0].json(),
-    responses[1].arrayBuffer(),
-    responses[2].arrayBuffer(),
-  ]);
-  if (vfiBuffer.byteLength !== VAT_WIDTH * CORNER_COUNT * 2) {
-    throw new Error("Invalid LoadingIcon Vfi texture");
+  if (data.byteLength !== expectedBytes) {
+    throw new Error(`Invalid ${name} texture`);
   }
-  if (vfpBuffer.byteLength !== VAT_WIDTH * POSITION_COUNT * 8) {
-    throw new Error("Invalid LoadingIcon Vfp texture");
+  return data;
+}
+
+function loadAssets(source) {
+  if (!source || !source.curves) {
+    throw new Error("LoadingIcon assets are required");
   }
   return {
-    curves,
-    vfi: new Uint16Array(vfiBuffer),
-    vfp: new Uint16Array(vfpBuffer),
+    curves: source.curves,
+    vfi: decodeTexture(
+      source.vfi,
+      VAT_WIDTH * CORNER_COUNT * 2,
+      "LoadingIcon Vfi",
+    ),
+    vfp: decodeTexture(
+      source.vfp,
+      VAT_WIDTH * POSITION_COUNT * 8,
+      "LoadingIcon Vfp",
+    ),
   };
 }
 
@@ -330,9 +338,9 @@ function gameRotation(frame) {
   ].map((value) => (value * Math.PI) / 180);
 }
 
-export async function startInkLoadingAnimation(
+function startInkLoadingAnimation(
   canvas,
-  assetRoot = DEFAULT_ASSET_ROOT,
+  source = globalThis.InkLoadingAnimationAssets,
 ) {
   const gl = canvas.getContext("webgl2", {
     alpha: true,
@@ -343,7 +351,7 @@ export async function startInkLoadingAnimation(
   });
   if (!gl) throw new Error("WebGL 2 is required");
 
-  const assets = await loadAssets(assetRoot);
+  const assets = loadAssets(source);
   const program = createProgram(gl);
   const vao = gl.createVertexArray();
   if (!vao) throw new Error("Could not create the vertex array");
@@ -455,3 +463,5 @@ export async function startInkLoadingAnimation(
     gl.deleteProgram(program);
   };
 }
+
+globalThis.startInkLoadingAnimation = startInkLoadingAnimation;

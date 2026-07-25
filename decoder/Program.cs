@@ -40,18 +40,8 @@ internal static class Program
         }
 
         Directory.CreateDirectory(outputPath);
-        ExtractTexture(
-            bntx,
-            "LoadingIcon_Vfi",
-            2,
-            Path.Combine(outputPath, "LoadingIcon_Vfi.r16ui.bin")
-        );
-        ExtractTexture(
-            bntx,
-            "LoadingIcon_Vfp",
-            8,
-            Path.Combine(outputPath, "LoadingIcon_Vfp.rgba16ui.bin")
-        );
+        var vfi = ExtractTexture(bntx, "LoadingIcon_Vfi", 2);
+        var vfp = ExtractTexture(bntx, "LoadingIcon_Vfp", 8);
 
         var animation = resource.ShaderParamAnims["LoadingIcon_00"];
         var material = animation.MaterialAnimDataList.Single();
@@ -78,10 +68,17 @@ internal static class Program
             name = animation.Name,
             @params = parameters,
         };
-        var json = JsonConvert.SerializeObject(dump, Formatting.Indented);
+        var json = JsonConvert.SerializeObject(dump, Formatting.None);
+        var bundle = "globalThis.InkLoadingAnimationAssets={curves:" +
+            json +
+            ",vfi:\"" +
+            Convert.ToBase64String(vfi) +
+            "\",vfp:\"" +
+            Convert.ToBase64String(vfp) +
+            "\"};";
         File.WriteAllText(
-            Path.Combine(outputPath, "LoadingIcon_00.curves.json"),
-            json + Environment.NewLine,
+            Path.Combine(outputPath, "LoadingIcon.assets.js"),
+            bundle + Environment.NewLine,
             new UTF8Encoding(false)
         );
         return 0;
@@ -137,11 +134,10 @@ internal static class Program
         }
     }
 
-    private static void ExtractTexture(
+    private static byte[] ExtractTexture(
         BntxFile bntx,
         string name,
-        uint bytesPerPixel,
-        string outputPath
+        uint bytesPerPixel
     )
     {
         var texture = bntx.Textures.Single(candidate => candidate.Name == name);
@@ -162,7 +158,7 @@ internal static class Program
             ref data,
             checked((int)(texture.Width * texture.Height * bytesPerPixel))
         );
-        File.WriteAllBytes(outputPath, data);
+        return data;
     }
 
     private static CurveDump ToCurveDump(AnimCurve curve)

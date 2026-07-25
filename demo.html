@@ -29,11 +29,11 @@
     </style>
   </head>
   <body>
-    <canvas aria-label="Animated ink loading icon" role="img"></canvas>
-    <script type="module">
-      import { startInkLoadingAnimation } from "./ink-loading-animation.js";
-
-      await startInkLoadingAnimation(document.querySelector("canvas"));
+    <canvas aria-label="demo" role="img"></canvas>
+    <script src="./assets/LoadingIcon.assets.js"></script>
+    <script src="./ink-loading-animation.js"></script>
+    <script>
+      startInkLoadingAnimation(document.querySelector("canvas"));
     </script>
   </body>
 </html>
